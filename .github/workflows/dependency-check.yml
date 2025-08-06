@@ -1,0 +1,32 @@
+name: Dependency & Security Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 5 * * 1'  # Every Monday at 5 AM
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'  # Match local version
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+
+      - name: Run tests (if any)
+        run: npm test
+        continue-on-error: true  # Skip if no test script defined
