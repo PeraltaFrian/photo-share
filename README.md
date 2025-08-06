@@ -1,3 +1,375 @@
+# Phase 3 – Implementing Security Best Practices for User Profile Dashboard
+## About this Phase of the PhotoShare App
+In this phase, I enhanced the photo-sharing web application by implementing a secure user profile dashboard. I focused on input validation, output encoding, and encryption to protect user data and prevent common web vulnerabilities such as cross-site scripting (XSS) and injection attacks. This included sanitizing user inputs, securely updating profile information, and encrypting sensitive fields like email and bio in the database. Additionally, I addressed security concerns in third-party libraries through dependency auditing and automated security checks using GitHub Actions.
+
+## Additional Features Introduced in Phase 3:
+- Personalized welcome message displaying the authenticated user's name.
+
+- Secure display of the user's name and email on the profile page.
+
+- Profile update form allowing changes to name, email, and bio.
+
+- Logout button to securely terminate the session.
+
+- Ensures only the authenticated user's data is accessible and visible.
+
+- Input Validation: All inputs are sanitized to prevent XSS and injection attacks.
+
+- Output Encoding: Escapes user-provided data before rendering to the DOM.
+
+- Encryption:
+
+   - Email and bio fields are encrypted before storage.
+
+   - Password encryption using Argon2 (carried over from Phase 2).
+
+- Secure Transmission
+- Third-Party Dependency Management
+
+## Setup Instructions
+1. Clone the repository
+      ```
+      git clone https://github.com/PeraltaFrian/photo-share.git
+      cd photo-share
+3.  Install dependencies
+      ```
+       npm install
+4. Set Up Environment Variables
+
+      Note: this requires environmental variables which is not uploaded to github
+
+      Create a .env file in the root folder with the following:
+      
+      ```
+      # ----------------------
+      # Contentful Settings
+      # ----------------------
+      CONTENTFUL_SPACE_ID=your_contentful_space_id
+      CONTENTFUL_ENVIRONMENT_ID=master
+      CONTENTFUL_DELIVERY_TOKEN=your_contentful_delivery_token
+      CONTENTFUL_MANAGEMENT_TOKEN=your_contentful_management_token
+
+      # ----------------------
+      # HTTPS Certificates
+      # ----------------------
+      SSL_KEY_PATH=./certs/key.pem
+      SSL_CERT_PATH=./certs/cert.pem
+
+      # ----------------------
+      # Server Settings
+      # ----------------------
+      PORT=3000
+
+      # ----------------------
+      # JWT Configuration
+      # ----------------------
+      JWT_SECRET=your_jwt_secret_key
+      JWT_REFRESH_SECRET=your_jwt_refresh_secret
+      JWT_EXPIRES_IN=15m
+
+      # ----------------------
+      # MongoDB
+      # ----------------------
+      MONGO_URI=mongodb://localhost:27017/photoapp
+
+      # ----------------------
+      # SMTP Configuration (for password reset)
+      # ----------------------
+      SMTP_HOST=smtp.example.com
+      SMTP_PORT=587
+      SMTP_USER=your_email@example.com
+      SMTP_PASS=your_email_app_password
+      SMTP_FROM="Your App <your_email@example.com>"
+
+      # Used to generate password reset links
+      FRONTEND_URL=https://localhost:3000
+
+      # ----------------------
+      # Google OAuth Settings
+      # ----------------------
+      GOOGLE_CLIENT_ID=your_google_client_id
+      GOOGLE_CLIENT_SECRET=your_google_client_secret
+      GOOGLE_CALLBACK_URL=https://localhost:3000/auth/google/callback
+
+      # ----------------------
+      # Session Secret
+      # ----------------------
+      SESSION_SECRET=your_super_secret_session_key
+
+      # ----------------------
+      # Encryption Secret
+      # ----------------------
+      ENCRYPTION_SECRET=your_long_random_secret_key_here
+
+### Make sure:
+- Set up a MongoDB instance and update MONGO_URI.
+- Create a Contentful space and generate your API tokens.
+- Configure Google OAuth credentials at console.developers.google.com.
+- Use a secure mail provider (e.g., Gmail with App Passwords) for SMTP.
+- Make sure your Contentful space has a content type called photoShare with the fields: name, description, image, and like.
+
+4. Generate SSL Certificates (Local Only).
+
+      openssl req -nodes -new -x509 -keyout certs/key.pem -out certs/cert.pem
+
+      This creates a self-signed certificate so the site can run on https://localhost.
+
+5. Start the Server.
+
+      node server.js
+
+      Open https://localhost:3000 in your browser. You may need to accept the security warning due to the self-signed certificate.
+
+### Part A: Develop the User Dashboard
+
+I developed a secure User Profile page that provides personalized access to profile data for authenticated users.
+
+- Displays a personalized welcome message using the user's name on the gallery, admin, and profile pages.
+
+- Profile Page:
+
+- Shows user-specific details (name and email).
+
+- Includes a logout button to terminate the session securely.
+
+- Restricts access to authenticated users only.
+
+- Retrieves and displays current user data with decrypted fields.
+
+## Part B: Design a Secure User Profile Update Form
+
+I implemented a secure User Profile Update Form that allows authenticated users to input or update their Name, Email, and Bio, with strong protections against malicious inputs and web vulnerabilitie
+
+Validation Rules:
+
+- Name: 3–50 alphabetic characters only.
+
+- Email: Must match standard email format.
+
+- Bio: up to 500 characters, disallowing HTML tags and special characters.
+
+### Input Validation & Sanitization
+
+- Prevents users from injecting harmful code into form fields by escaping special characters.
+
+  ```
+  function sanitizeInput(str) {
+    return str
+      .replace(/</g, "&lt;")      // Escape less-than
+      .replace(/>/g, "&gt;")      // Escape greater-than
+      .replace(/"/g, "&quot;")    // Escape double quotes
+      .replace(/'/g, "&#039;")    // Escape single quotes
+      .replace(/&/g, "&amp;");    // Escape ampersand
+  }
+
+-  Sanitizes user inputs before sending to the backend for profile updates.
+    ```
+    document.querySelector('#profileForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+    
+      // Sanitize input fields
+      const name = sanitizeInput(document.querySelector('#name').value.trim());
+      const email = sanitizeInput(document.querySelector('#email').value.trim());
+      const bio = sanitizeInput(document.querySelector('#bio').value.trim());
+    
+      // Submit sanitized data to backend
+      fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, bio }),
+      })
+        .then((res) => res.json())
+        .then((data) => alert(data.message))
+        .catch((err) => console.error(err));
+    });
+
+- Uses escapeHtml() to safely insert user content into the DOM.
+
+   ```
+  fetch('/api/users/me')
+    .then(res => res.json())
+    .then(user => {
+      document.querySelector('#displayName').textContent = escapeHtml(user.name);
+      document.querySelector('#displayEmail').textContent = escapeHtml(user.email);
+      document.querySelector('#displayBio').textContent = escapeHtml(user.bio);
+    });
+  
+- Escapes stored data before displaying it on the page, preventing XSS (Cross-Site Scripting) when rendering user input.
+
+   ```
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")     // Escape ampersand
+      .replace(/</g, "&lt;")      // Escape less-than
+      .replace(/>/g, "&gt;")      // Escape greater-than
+      .replace(/"/g, "&quot;")    // Escape double quotes
+      .replace(/'/g, "&#039;");   // Escape single quotes
+  }
+
+- Checks if user input follows the correct format before submitting. Helps avoid bad or unexpected values.
+  ```
+  function validateInputs(name, email, bio) {
+    const nameRegex = /^[A-Za-z\s]{3,50}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const bioRegex = /^[\w\s.,!?'"()\-@]{0,500}$/;
+  
+    if (!nameRegex.test(name)) return 'Invalid name format';
+    if (!emailRegex.test(email)) return 'Invalid email format';
+    if (!bioRegex.test(bio)) return 'Bio contains invalid characters';
+  
+    return null; // No errors
+  }
+
+- Uses escapeHtml() to safely insert user content into the DOM.
+
+- Special characters and HTML tags are stripped using a custom sanitizeInput() function.
+
+- Escapes stored data before displaying it on the page, preventing XSS (Cross-Site Scripting) when rendering user input.
+
+#### Backend:
+
+- Utilizes express-validator to enforce validation rules server-side.
+
+- Prevents malicious data from reaching or affecting the database.
+
+### Encryption
+
+- The email and bio fields are securely encrypted before being stored in MongoDB using Node.js’s built-in crypto module with the AES-256-CBC encryption algorithm.
+
+- Each encryption operation uses a random Initialization Vector (IV) to ensure unique ciphertexts even if the same data is encrypted multiple times.
+
+- When data is retrieved for display, it is decrypted on the server side before sending to the client.
+
+- The encryption key is derived securely by hashing an environment variable (ENCRYPTION_SECRET), keeping the key out of source code.
+
+### HTTPS
+
+- All data transmission between client and server occurs over HTTPS, ensuring transport-layer security.
+
+### Reflection
+
+- What types of vulnerabilities can arise from improper input validation?
+
+Common vulnerabilities include Cross-Site Scripting (XSS), SQL Injection, data corruption, and broken authentication or authorization flaws. Improper input validation allows attackers to inject malicious payloads or corrupt data.
+
+- How does output encoding prevent XSS attacks?
+
+Output encoding converts special characters like <, >, and " into safe HTML entities (&lt;, &gt;, &quot;), ensuring that browsers render them as plain text instead of executing them as code, effectively preventing script injection.
+
+- What challenges did you encounter with encryption, and how did you resolve them?
+
+Challenges included managing initialization vectors (IVs) correctly and ensuring consistent key generation. This was resolved by generating a fixed-length encryption key via crypto.createHash('sha256') on a secret string and by prepending the random IV to the encrypted text, so it can be retrieved during decryption for consistent results.
+
+## Part C: Update Third-Party Software and Libraries
+
+Keeping dependencies current is crucial to prevent known vulnerabilities and ensure the long-term security and stability of your application.
+
+### Steps taken:
+- Run `npm audit` to identify security vulnerabilities:
+   ```
+    npm audit
+    npm audit fix
+- Manually upgraded outdated packages when automatic fixes were insufficient.
+- Utilized the "overrides" field in package.json to force updated versions of nested sub-dependencies.
+- Re-run npm audit to verify that all vulnerabilities were resolved, resulting in 0 vulnerabilities
+
+Automation for Continuous Security
+
+- Implemented a GitHub Actions workflow (.github/workflows/dependency-check.yml) to automate security checks using npm audit.
+
+- The workflow runs automatically on:
+  - Every push and pull request to the main branch
+  - A scheduled weekly check (every Monday at 5 AM)
+- Also includes an optional step to run tests (npm test).
+
+- This ensures ongoing enforcement of secure and up-to-date dependencies throughout the development lifecycle.
+
+## Reflection
+- Why is it risky to use outdated third-party libraries?
+
+  Outdated libraries often contain known security vulnerabilities that attackers actively exploit. Using unsecured versions exposes your application to risks.
+
+- How does automation help with dependency management?
+
+  Automation helps manage dependencies by continuously monitoring for outdated or vulnerable packages and handling updates with minimal manual effort.
+
+  I implemented a GitHub Actions workflow that automatically runs npm audit on every push and pull request to the main branch. This setup ensures that any new code is immediately checked for known vulnerabilities. The workflow also includes a scheduled weekly check to catch issues in dependencies over time, even if no new code is pushed.
+
+  This automation helps maintain the security of dependencies without needing to manually run checks.
+
+- What risks does automation have?
+
+  Automated dependency updates may introduce breaking changes, cause regression bugs, or create conflicts with other packages. This necessitates careful testing and review before merging updates.
+
+## Part D: Test and Debug
+
+Security testing is crucial to validate that the implemented protections such as input validation, output encoding, and encryption—are effectively mitigating common web vulnerabilities.
+
+### What was tested:
+Input Validation
+
+-Attempted to inject malicious scripts into form fields.
+
+-Verified that the server rejects invalid input using custom rules and express-validator.
+
+Output Encoding
+
+-Ensured that user-generated content (e.g., bio) is safely encoded before rendering in the browser, preventing reflected and stored XSS attacks.
+
+Encryption
+
+- Verified that sensitive fields like email and bio are encrypted at rest in MongoDB and correctly decrypted when displayed.
+
+- Tested behavior with tampered encrypted strings to ensure decryption fails securely.
+
+Authentication & Access Control
+
+- Confirmed that protected routes are accessible only with a valid session or JWT token.
+
+- Verified that one user cannot access another user’s data.
+
+SQL Injection 
+
+- Simulated injection-like payloads to ensure MongoDB queries are properly sanitized and safe.
+
+### Tools & Techniques Used:
+- Manual testing with malicious inputs
+
+- Browser inspection to ensure no raw HTML or JavaScript is rendered
+
+- Observation of database entries to confirm encryption format
+
+- Monitoring network traffic to ensure HTTPS is enforced
+
+## REFLECTION
+- Which vulnerabilities were most challenging to address?
+
+  - Cross-Site Scripting (XSS) was the most challenging to guard against, especially ensuring that all user input is properly sanitized before storage, and all output is safely encoded or escaped before rendering on the frontend. Protecting against stored XSS required strict input validation on both the client and server sides. It was also important to consistently apply custom encoding functions across all user-generated content.
+
+- What additional testing tools or strategies could improve the process?
+
+  - Integrating automated security scanners like OWASP ZAP to detect XSS and other web vulnerabilities continuously.
+
+  - Incorporating security tests in CI/CD pipelines using GitHub Actions or other tools.
+
+  - Enforcing Content Security Policy (CSP) headers to block inline scripts and unauthorized resource loads at the browser level.
+
+  - Developing unit tests for input validation and output encoding functions to catch regressions early.
+
+## Part E: Document Your Work
+
+This README is structured to help set up and understand the PhotoShare application.
+
+1. See Setup section at the top of this README for detailed instructions on how to clone the repository, install dependencies and run the application.
+
+2. Detailed explanation of Input validation techniques, Output encoding methods, Encryption techniques used, Third-party libraries dependency management and lesson learned are mentioned above each Part of Phase 3
+3. Video is included in submission of Phase 3.
+
+# ----------------- END OF PHASE 3 README -----------------
+
+
 # Phase 2 - Implementing Authentication and Authorization Mechanisms
 ## PhotoShare App
 PhotoShare is a secure, full-stack photo sharing application that allows users to register, login (via email or Google), upload and view photos, and like or delete photos based on user roles. Built with Express, MongoDB, Contentful CMS, Passport.js, and secured using JWT, CSRF tokens, and HTTPS.
