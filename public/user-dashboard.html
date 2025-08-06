@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>User Profile Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <div id="welcomeMessage" class="welcome"></div>
+  <br />
+  <br />
+  
+  <section id="profileSection">
+    <h2>Your Profile</h2>
+    <p><strong>Name:</strong> <span id="username">Loading...</span></p>
+    <p><strong>Email:</strong> <span id="emailDisplay">Loading...</span></p>
+    <br />
+    
+    <section id="profileUpdateSection">
+      <h3>Update Profile</h3>
+      <form id="profileUpdateForm">
+        <label for="name">Name:</label><br />
+        <input
+          type="text"
+          id="name"
+          name="name"
+          required
+          minlength="3"
+          maxlength="50"
+          pattern="[A-Za-z\s]+"
+          title="3-50 alphabetic characters only"
+        /><br />
+
+        <label for="email">Email:</label><br />
+        <input
+          type="email"
+          id="email"
+          name="email"
+          required
+          title="Enter a valid email address"
+        /><br />
+
+        <label for="bio">Bio:</label><br />
+        <textarea
+          id="bio"
+          name="bio"
+          maxlength="500"
+          rows="4"
+          placeholder="Tell us about yourself (max 500 characters)"
+        ></textarea><br />
+
+        <button type="submit">Update Profile</button>
+      </form>
+      <div id="updateMessage"></div>
+    </section>
+  </section>
+
+  <script type="module" src="js/user-dashboard.js"></script>
+  <script src="js/navbar-loader.js" defer></script>
+</body>
+</html>
